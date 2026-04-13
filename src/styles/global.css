@@ -1,0 +1,81 @@
+:root {
+  --bg-base: #030407;
+  --panel-bg: rgba(10, 12, 16, 0.65);
+  --panel-border: rgba(255, 255, 255, 0.08);
+  --panel-glow: 0 4px 30px rgba(0, 0, 0, 0.5);
+  
+  --text-primary: #e0e5ec;
+  --text-secondary: #8b949e;
+  
+  --accent-gold: #d4af37;
+  --accent-gold-glow: rgba(212, 175, 55, 0.4);
+  --accent-cyan: #00f0ff;
+  --accent-cyan-glow: rgba(0, 240, 255, 0.3);
+  --accent-purple: #9d4edd;
+
+  --font-ui: 'Outfit', sans-serif;
+  --font-mono: 'Fira Code', monospace;
+  
+  --transition-smooth: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body, #root {
+  height: 100%;
+  overflow: hidden;
+  background: var(--bg-base);
+  color: var(--text-primary);
+  font-family: var(--font-ui);
+}
+
+/* Base background gradient / glow */
+body::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle at 50% 50%, rgba(212, 175, 55, 0.03) 0%, transparent 60%),
+              radial-gradient(circle at 20% 80%, rgba(0, 240, 255, 0.04) 0%, transparent 50%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.2); }
+
+/* Premium Glass Panel utility */
+.glass-panel {
+  background: var(--panel-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--panel-border);
+  box-shadow: var(--panel-glow);
+  border-radius: 8px;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+.cursor {
+  display: inline-block;
+  width: 8px;
+  height: 16px;
+  background: var(--accent-cyan);
+  animation: blink 1s step-end infinite;
+  vertical-align: text-bottom;
+  margin-left: 2px;
+  box-shadow: 0 0 8px var(--accent-cyan-glow);
+}
+
+/* Removed CRT scanlines for a cleaner, modern feel */
