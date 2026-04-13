@@ -3,7 +3,8 @@
 // ─────────────────────────────────────────────────────────────
 
 import { useState } from 'react'
-import { addProject } from '../kernel/data'
+import { addProject, HOQ_CONNECTED } from '../kernel/data'
+import { createHoqProject } from '../kernel/hoq-client'
 
 export default function Dashboard({ onStateChange }) {
   const [formData, setFormData] = useState({
@@ -99,7 +100,7 @@ export default function Dashboard({ onStateChange }) {
     }, 1200)
   }
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
     
     // Auto-generate an ID based on name
@@ -122,8 +123,26 @@ export default function Dashboard({ onStateChange }) {
       url: formData.visibility === 'private' ? 'private' : formData.url
     }
 
-    addProject(newProject)
-    setAlert(`Project '${formData.name}' successfully inserted into kernel memory.`)
+    if (HOQ_CONNECTED) {
+      setAlert(`Deploying to Imperial API...`)
+      const res = await createHoqProject({
+        name: newProject.name,
+        description: newProject.desc,
+        signature: 'RSP_OS_INSERT'
+      })
+      if (res) {
+        setAlert(`Project successfully synchronized with House of Qui backend.`)
+        // Also add to local memory for immediate graph update
+        addProject(newProject)
+      } else {
+        setAlert(`Imperial API rejected connection. Falling back to local memory.`)
+        addProject(newProject)
+      }
+    } else {
+      addProject(newProject)
+      setAlert(`Project '${formData.name}' successfully inserted into kernel memory (Offline Mode).`)
+    }
+
     setFormData({ name: '', desc: '', url: '', visibility: 'public', skills: '' })
     
     setTimeout(() => {

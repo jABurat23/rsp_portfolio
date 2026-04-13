@@ -98,8 +98,10 @@ export default function IntelligenceReport({ data }) {
       <div style={{ marginTop: '30px', padding: '12px', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '4px', background: 'rgba(0,0,0,0.1)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <div style={{ width: '6px', height: '6px', background: accent, borderRadius: '50%', boxShadow: `0 0 10px ${accent}` }}></div>
-          <div style={{ fontSize: '10px', color: 'var(--text-secondary)', letterSpacing: '1px' }}>
-            {isProject ? 'ENCRYPTED PROJECT RECORD // SOURCE: KERNEL-DYN' : 'SKILL MATRICES AUTHENTICATED // SOURCE: KERNEL-STATIC'}
+          <div style={{ fontSize: '10px', color: 'var(--text-secondary)', letterSpacing: '1px', fontFamily: 'var(--font-mono)' }}>
+            {isProject 
+              ? `LOG LINEAGE: ${data.source_origin || 'LOCAL SYSTEM ARCHIVE [DEFAULT]'}` 
+              : 'SKILL MATRICES AUTHENTICATED // SOURCE: KERNEL-STATIC'}
           </div>
         </div>
       </div>

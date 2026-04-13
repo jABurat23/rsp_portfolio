@@ -10,7 +10,7 @@ const VIZ_LABEL = {
   matrix:   'THE MATRIX',
 }
 
-export default function Header({ cwd, viz, uptime }) {
+export default function Header({ cwd, viz, uptime, hoqOnline }) {
   const h = Math.floor(uptime / 3600)
   const m = Math.floor((uptime % 3600) / 60)
   const s = uptime % 60
@@ -63,15 +63,24 @@ export default function Header({ cwd, viz, uptime }) {
         <Stat label="UP"  value={uptimeStr} color="var(--accent-cyan)" />
         <Stat label="CWD" value={cwd}       color="var(--accent-gold)" />
         <Stat label="VIZ" value={VIZ_LABEL[viz] || viz.toUpperCase()} color={vizColor} />
+        <Stat label="HOQ" value={hoqOnline ? 'ONLINE' : 'ARCHIVE'} title={hoqOnline ? 'Synchronized with House of Qui API' : 'Backend offline. Using Local System Archive.'} color={hoqOnline ? '#00ff88' : 'var(--accent-gold)'} pulse={hoqOnline} />
         <Stat label="MEM" value="42 MB"     color="var(--accent-purple)" />
       </div>
     </header>
   )
 }
 
-function Stat({ label, value, color }) {
+function Stat({ label, value, color, pulse }) {
   return (
-    <span>
+    <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+      {pulse && (
+        <span style={{
+          display: 'inline-block', width: 6, height: 6,
+          borderRadius: '50%', background: color,
+          boxShadow: `0 0 6px ${color}`,
+          animation: 'pulse-dot 2s ease-in-out infinite'
+        }} />
+      )}
       {label}: <span style={{ color }}>{value}</span>
     </span>
   )

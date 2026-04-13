@@ -51,18 +51,37 @@ export function computeSkillNodes(W, H) {
 
 export function drawSkillTree(ctx, W, H, t, nodes, edges, mX = -100, mY = -100) {
   ctx.clearRect(0, 0, W, H)
-  // Transparent base allows glassmorphism to show
+  
+  // Background Atmospheric Grid
+  drawGrid(ctx, W, H, t)
 
   let hoveredNode = null;
 
-  // Dependency edges
+  // Dependency edges & particles
   edges.forEach(([a, b]) => {
+    const na = nodes[a]
+    const nb = nodes[b]
+    
+    // Draw Tether
     ctx.beginPath()
-    ctx.moveTo(nodes[a].x, nodes[a].y)
-    ctx.lineTo(nodes[b].x, nodes[b].y)
-    ctx.strokeStyle = 'rgba(212,175,55,0.18)'
+    ctx.moveTo(na.x, na.y)
+    ctx.lineTo(nb.x, nb.y)
+    ctx.strokeStyle = 'rgba(212,175,55,0.12)'
     ctx.lineWidth = 1
     ctx.stroke()
+
+    // Flowing Particles
+    const particleCount = 2
+    for (let p = 0; p < particleCount; p++) {
+      const offset = ((t * 0.001) + (p / particleCount)) % 1
+      const px = na.x + (nb.x - na.x) * offset
+      const py = na.y + (nb.y - na.y) * offset
+      
+      ctx.beginPath()
+      ctx.arc(px, py, 1, 0, Math.PI * 2)
+      ctx.fillStyle = 'rgba(212,175,55,0.4)'
+      ctx.fill()
+    }
   })
 
   // Nodes
@@ -73,46 +92,74 @@ export function drawSkillTree(ctx, W, H, t, nodes, edges, mX = -100, mY = -100) 
     if (isHovered) hoveredNode = n
 
     const col   = isHovered ? '#ffffff' : (CAT_COLORS[n.cat] || '#00ff41')
-    // Global heartbeat cycle
     const heartbeat = 0.8 + 0.2 * Math.sin(t * 0.003)
     const pulse = isHovered ? 1.5 : (0.7 + 0.3 * Math.sin(t * 0.002 + i * 0.7)) * heartbeat
 
-    // Glow halo
+    // Glow halo with Bloom
+    ctx.save()
     ctx.beginPath()
     ctx.arc(n.x, n.y, r * (isHovered ? 4 : 3) * heartbeat, 0, Math.PI * 2)
-    ctx.fillStyle = hexToRgba(col, (isHovered ? 0.25 : 0.1) * pulse)
+    ctx.shadowBlur = isHovered ? 20 : 10
+    ctx.shadowColor = col
+    ctx.fillStyle = hexToRgba(col, (isHovered ? 0.3 : 0.1) * pulse)
     ctx.fill()
+    ctx.restore()
 
     // Core dot
     ctx.beginPath()
     ctx.arc(n.x, n.y, r * (isHovered ? 1.2 : 1.0) * heartbeat, 0, Math.PI * 2)
-    ctx.fillStyle = hexToRgba(col, 0.9)
+    ctx.fillStyle = hexToRgba(col, 1)
     ctx.fill()
 
     // Label
-    ctx.font = "12px 'Outfit', sans-serif"
-    ctx.fillStyle = hexToRgba(col, 0.95)
+    ctx.font = "600 13px 'Outfit', sans-serif"
+    ctx.fillStyle = isHovered ? '#fff' : hexToRgba(col, 0.9)
     ctx.textAlign = 'left'
-    ctx.fillText(n.name, n.x + r + 5, n.y + 4)
+    ctx.fillText(n.name, n.x + r + 8, n.y + 4)
 
-    // Level bar (background)
-    ctx.fillStyle = hexToRgba(col, 0.2)
-    ctx.fillRect(n.x + r + 5, n.y + 7, 44, 2)
-    // Level bar (filled)
-    ctx.fillStyle = hexToRgba(col, 0.75)
-    ctx.fillRect(n.x + r + 5, n.y + 7, 44 * (n.level / 100), 2)
+    // Level bar
+    ctx.fillStyle = 'rgba(255,255,255,0.05)'
+    ctx.fillRect(n.x + r + 8, n.y + 8, 40, 2)
+    ctx.fillStyle = hexToRgba(col, 0.8)
+    ctx.fillRect(n.x + r + 8, n.y + 8, 40 * (n.level / 100), 2)
   })
 
   // Legend
   const cats = Object.entries(CAT_COLORS)
   cats.forEach(([cat, col], i) => {
     ctx.fillStyle = col
-    ctx.fillRect(10, H - 20 - i * 18, 8, 8)
-    ctx.font = "11px 'Outfit', sans-serif"
-    ctx.fillStyle = col
+    ctx.shadowBlur = 5
+    ctx.shadowColor = col
+    ctx.fillRect(20, H - 30 - i * 20, 10, 10)
+    ctx.shadowBlur = 0
+    ctx.font = "12px 'Outfit', sans-serif"
+    ctx.fillStyle = 'rgba(255,255,255,0.6)'
     ctx.textAlign = 'left'
-    ctx.fillText(cat, 22, H - 9 - i * 16)
+    ctx.fillText(cat.toUpperCase(), 38, H - 21 - i * 20)
   })
 
   return hoveredNode;
+}
+
+function drawGrid(ctx, W, H, t) {
+  ctx.save()
+  ctx.strokeStyle = 'rgba(0,240,255,0.03)'
+  ctx.lineWidth = 1
+  const gridSize = 60
+  const offsetX = (t * 0.02) % gridSize
+  const offsetY = (t * 0.01) % gridSize
+
+  for (let x = offsetX; x < W; x += gridSize) {
+    ctx.beginPath()
+    ctx.moveTo(x, 0)
+    ctx.lineTo(x, H)
+    ctx.stroke()
+  }
+  for (let y = offsetY; y < H; y += gridSize) {
+    ctx.beginPath()
+    ctx.moveTo(0, y)
+    ctx.lineTo(W, y)
+    ctx.stroke()
+  }
+  ctx.restore()
 }

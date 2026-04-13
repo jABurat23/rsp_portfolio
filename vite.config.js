@@ -63,4 +63,15 @@ const localScannerPlugin = () => ({
 
 export default defineConfig({
   plugins: [react(), localScannerPlugin()],
+  server: {
+    proxy: {
+      // In dev, /hoq-api/* → http://localhost:4000/*
+      // This is stripped automatically on production builds (no server proxy on Vercel)
+      '/hoq-api': {
+        target: 'http://localhost:4000',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/hoq-api/, ''),
+      },
+    },
+  },
 })

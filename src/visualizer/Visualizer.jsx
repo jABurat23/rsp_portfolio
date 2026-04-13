@@ -16,11 +16,48 @@ export default function Visualizer({ mode, onStateChange }) {
   const matrixRef    = useRef(null)
   const mouseRef     = useRef({ x: -100, y: -100 })
   const hoveredRef   = useRef(null)
+  const ripplesRef   = useRef([])
 
   // Reset matrix drops when leaving matrix mode
   useEffect(() => {
     if (mode !== 'matrix') matrixRef.current = null
   }, [mode])
+
+  // Click handler
+  const handleClick = () => {
+    const node = hoveredRef.current
+    
+    // Create ripples
+    const newRipple = { x: mouseRef.current.x, y: mouseRef.current.y, r: 0, opacity: 1 }
+    ripplesRef.current.push(newRipple)
+
+    if (node && onStateChange) {
+      // Strip out internal positions x,y for clean output
+      const { x, y, ...cleanData } = node;
+      const title = node.status ? `// projects/${node.id || 'record'}.intelligence` : `// skills/${node.id || 'record'}.intelligence`;
+      
+      onStateChange({
+        sourcePane: {
+          title,
+          content: cleanData,
+          mode: 'intelligence'
+        }
+      })
+    }
+  }
+
+  const drawRipples = (ctx, t) => {
+    ripplesRef.current = ripplesRef.current.filter(r => r.opacity > 0.01)
+    ripplesRef.current.forEach(r => {
+      r.r += 4
+      r.opacity *= 0.96
+      ctx.beginPath()
+      ctx.arc(r.x, r.y, r.r, 0, Math.PI * 2)
+      ctx.strokeStyle = `rgba(0, 240, 255, ${r.opacity * 0.4})`
+      ctx.lineWidth = 2
+      ctx.stroke()
+    })
+  }
 
   const draw = useCallback((ctx, t) => {
     const canvas = ctx.canvas
@@ -32,28 +69,54 @@ export default function Visualizer({ mode, onStateChange }) {
     
     let newHovered = null;
 
-    if (mode === 'skills') {
-      if (!cachedRef.current.skill) cachedRef.current.skill = computeSkillNodes(W, H)
-      const { nodes, edges } = cachedRef.current.skill
-      newHovered = drawSkillTree(ctx, W, H, t, nodes, edges, mX, mY)
+    // Chromatic Aberration Pass
+    const shift = hoveredRef.current ? 1.2 : 0
+    
+    const renderAll = (offsetX, colorMask) => {
+      ctx.save()
+      if (colorMask) {
+        ctx.globalCompositeOperation = 'screen'
+        ctx.translate(offsetX, 0)
+      }
 
-    } else if (mode === 'projects') {
-      if (!cachedRef.current.project) cachedRef.current.project = computeProjectNodes(W, H)
-      const { projNodes, skillNodes, edges } = cachedRef.current.project
-      newHovered = drawProjectNet(ctx, W, H, t, projNodes, skillNodes, edges, mX, mY)
+      if (mode === 'skills') {
+        if (!cachedRef.current.skill) cachedRef.current.skill = computeSkillNodes(W, H)
+        const { nodes, edges } = cachedRef.current.skill
+        newHovered = drawSkillTree(ctx, W, H, t, nodes, edges, mX - (colorMask ? offsetX : 0), mY)
 
+      } else if (mode === 'projects') {
+        if (!cachedRef.current.project) cachedRef.current.project = computeProjectNodes(W, H)
+        const { projNodes, skillNodes, edges } = cachedRef.current.project
+        newHovered = drawProjectNet(ctx, W, H, t, projNodes, skillNodes, edges, mX - (colorMask ? offsetX : 0), mY)
+      }
+      ctx.restore()
+    }
+
+    if (mode === 'skills' || mode === 'projects') {
+      if (shift > 0) {
+        // Red shift
+        ctx.save()
+        ctx.filter = 'matrix(1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0)'
+        renderAll(-shift, true)
+        ctx.restore()
+
+        // Blue shift
+        ctx.save()
+        ctx.filter = 'matrix(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0)'
+        renderAll(shift, true)
+        ctx.restore()
+      }
+      
+      // Full channel render
+      renderAll(0, false)
     } else if (mode === 'matrix') {
       if (!matrixRef.current) matrixRef.current = initMatrix(W, H)
       drawMatrix(ctx, W, H, matrixRef.current)
-
-    } else if (mode === 'dashboard') {
-      ctx.fillStyle = 'rgba(3, 4, 7, 0.8)'
-      ctx.fillRect(0, 0, W, H)
-      drawLanding(ctx, W, H, t)
     } else {
-      // Idle / standby / landing screen
       drawLanding(ctx, W, H, t)
     }
+
+    drawRipples(ctx, t)
     
     hoveredRef.current = newHovered;
     canvas.style.cursor = newHovered ? 'pointer' : 'default';
@@ -105,22 +168,6 @@ export default function Visualizer({ mode, onStateChange }) {
     mouseRef.current = { x: -100, y: -100 }
   }
 
-  const handleClick = () => {
-    const node = hoveredRef.current
-    if (node && onStateChange) {
-      // Strip out internal positions x,y for clean output
-      const { x, y, ...cleanData } = node;
-      const title = node.status ? `// projects/${node.id || 'record'}.intelligence` : `// skills/${node.id || 'record'}.intelligence`;
-      
-      onStateChange({
-        sourcePane: {
-          title,
-          content: cleanData,
-          mode: 'intelligence'
-        }
-      })
-    }
-  }
 
   return (
     <>

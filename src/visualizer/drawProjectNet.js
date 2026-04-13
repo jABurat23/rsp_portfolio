@@ -52,82 +52,136 @@ export function computeProjectNodes(W, H) {
 
 export function drawProjectNet(ctx, W, H, t, projNodes, skillNodes, edges, mX = -100, mY = -100) {
   ctx.clearRect(0, 0, W, H)
-  // Transparent base
+  
+  // Background Atmospheric Grid
+  drawGrid(ctx, W, H, t)
   
   let hoveredNode = null;
 
-  // Edges
+  // Edges & Particles
   edges.forEach(([pi, si]) => {
     const p = projNodes[pi]
     const s = skillNodes[si]
+
     ctx.beginPath()
     ctx.moveTo(p.x, p.y)
     ctx.lineTo(s.x, s.y)
-    ctx.strokeStyle = 'rgba(0,240,255,0.18)'
+    ctx.strokeStyle = 'rgba(0,240,255,0.12)'
     ctx.lineWidth = 1
     ctx.stroke()
+
+    // Flowing Particles (Data stream)
+    const particleCount = 2
+    for (let i = 0; i < particleCount; i++) {
+        const offset = ((t * 0.0008) + (i / particleCount)) % 1
+        const px = p.x + (s.x - p.x) * offset
+        const py = p.y + (s.y - p.y) * offset
+        
+        ctx.beginPath()
+        ctx.arc(px, py, 1.2, 0, Math.PI * 2)
+        ctx.fillStyle = 'rgba(0,240,255,0.45)'
+        ctx.fill()
+    }
   })
 
   // Skill nodes
   skillNodes.forEach((n, i) => {
     const dist = Math.hypot(n.x - mX, n.y - mY)
-    const isHovered = dist < 12
+    const isHovered = dist < 20
     if (isHovered) hoveredNode = n
     
+    const col = '#d4af37'
     const pulse = isHovered ? 1.5 : (0.7 + 0.3 * Math.sin(t * 0.002 + i))
+
+    ctx.save()
     ctx.beginPath()
-    ctx.arc(n.x, n.y, 5, 0, Math.PI * 2)
-    ctx.fillStyle = `rgba(212,175,55,${0.7 * pulse})`
+    ctx.arc(n.x, n.y, 5 * pulse, 0, Math.PI * 2)
+    ctx.shadowBlur = isHovered ? 15 : 5
+    ctx.shadowColor = col
+    ctx.fillStyle = hexToRgba(col, 0.8 * pulse)
     ctx.fill()
-    ctx.font = "11px 'Outfit', sans-serif"
-    ctx.fillStyle = `rgba(212,175,55,0.8)`
+    ctx.restore()
+
+    ctx.font = "600 11px 'Outfit', sans-serif"
+    ctx.fillStyle = hexToRgba(col, 0.9)
     ctx.textAlign = 'center'
-    ctx.fillText(n.name, n.x, n.y + 16)
+    ctx.fillText(n.name.toUpperCase(), n.x, n.y + 18)
   })
 
   // Project nodes
   projNodes.forEach((n, i) => {
     const dist = Math.hypot(n.x - mX, n.y - mY)
-    const isHovered = dist < 20
+    const isHovered = dist < 25
     if (isHovered) hoveredNode = n
 
     const col   = isHovered ? '#ffffff' : (STATUS_COLOR[n.status] || '#ffa500')
     const heartbeat = 0.8 + 0.2 * Math.sin(t * 0.003)
     const pulse = isHovered ? 1.5 : (0.8 + 0.2 * Math.sin(t * 0.0015 + i * 1.3)) * heartbeat
 
+    ctx.save()
+    ctx.shadowBlur = isHovered ? 25 : 10
+    ctx.shadowColor = col
+
     // Filled background
     ctx.beginPath()
     ctx.arc(n.x, n.y, 16 * heartbeat, 0, Math.PI * 2)
-    ctx.fillStyle = hexToRgba(col, 0.12 * pulse)
+    ctx.fillStyle = hexToRgba(col, 0.15 * pulse)
     ctx.fill()
 
     // Border
     ctx.beginPath()
     ctx.arc(n.x, n.y, 16 * heartbeat, 0, Math.PI * 2)
-    ctx.strokeStyle = hexToRgba(col, 0.9 * pulse)
+    ctx.strokeStyle = hexToRgba(col, 1 * pulse)
     ctx.lineWidth = 2
     ctx.stroke()
+    ctx.restore()
 
     // Label
-    ctx.font = "bold 12px 'Outfit', sans-serif"
-    ctx.fillStyle = hexToRgba(col, 0.95)
+    ctx.font = "bold 13px 'Outfit', sans-serif"
+    ctx.fillStyle = isHovered ? '#fff' : hexToRgba(col, 1)
     ctx.textAlign = 'center'
     ctx.fillText(n.name.split(' ')[0], n.x, n.y + 4)
 
-    ctx.font = "11px 'Fira Code', monospace"
-    ctx.fillStyle = 'rgba(255,255,255,0.4)'
-    ctx.fillText(n.year, n.x, n.y + 30)
+    ctx.font = "10px 'Fira Code', monospace"
+    ctx.fillStyle = 'rgba(255,255,255,0.45)'
+    ctx.fillText(n.year, n.x, n.y + 34)
   })
 
   // Legend
   Object.entries(STATUS_COLOR).forEach(([status, col], i) => {
     ctx.fillStyle = col
-    ctx.fillRect(10, H - 20 - i * 18, 8, 8)
-    ctx.font = "11px 'Outfit', sans-serif"
-    ctx.fillStyle = col
+    ctx.shadowBlur = 5
+    ctx.shadowColor = col
+    ctx.fillRect(20, H - 30 - i * 20, 10, 10)
+    ctx.shadowBlur = 0
+    ctx.font = "12px 'Outfit', sans-serif"
+    ctx.fillStyle = 'rgba(255,255,255,0.6)'
     ctx.textAlign = 'left'
-    ctx.fillText(status, 22, H - 9 - i * 16)
+    ctx.fillText(status.toUpperCase(), 38, H - 21 - i * 20)
   })
 
   return hoveredNode;
+}
+
+function drawGrid(ctx, W, H, t) {
+  ctx.save()
+  ctx.strokeStyle = 'rgba(0,240,255,0.03)'
+  ctx.lineWidth = 1
+  const gridSize = 80
+  const offsetX = (t * 0.015) % gridSize
+  const offsetY = (t * 0.008) % gridSize
+
+  for (let x = offsetX; x < W; x += gridSize) {
+    ctx.beginPath()
+    ctx.moveTo(x, 0)
+    ctx.lineTo(x, H)
+    ctx.stroke()
+  }
+  for (let y = offsetY; y < H; y += gridSize) {
+    ctx.beginPath()
+    ctx.moveTo(0, y)
+    ctx.lineTo(W, y)
+    ctx.stroke()
+  }
+  ctx.restore()
 }

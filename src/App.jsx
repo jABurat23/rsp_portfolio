@@ -11,7 +11,7 @@ import Terminal   from './components/Terminal.jsx'
 import SourcePane from './components/SourcePane.jsx'
 import Visualizer from './visualizer/Visualizer.jsx'
 import PaneHeader from './components/PaneHeader.jsx'
-import { SKILLS } from './kernel/data.js'
+import { SKILLS, initData, HOQ_CONNECTED } from './kernel/data.js'
 
 const VIZ_LABEL = {
   boot:     'STANDBY',
@@ -41,6 +41,13 @@ export default function App() {
     startTime: startTimeRef.current,
   })
   const [sourcePane, setSourcePane] = useState(DEFAULT_SOURCE)
+
+  const [hoqOnline, setHoqOnline] = useState(false)
+
+  // Boot: attempt to load live data from House of Qui
+  useEffect(() => {
+    initData().then(() => setHoqOnline(HOQ_CONNECTED))
+  }, [])
 
   // Uptime ticker
   useEffect(() => {
@@ -81,7 +88,7 @@ export default function App() {
       }}
     >
       {/* ── Status bar ────────────────────────────────────── */}
-      <Header cwd={kernelState.cwd} viz={kernelState.viz} uptime={uptime} />
+      <Header cwd={kernelState.cwd} viz={kernelState.viz} uptime={uptime} hoqOnline={hoqOnline} />
 
       {/* ── Main grid ─────────────────────────────────────── */}
       <div

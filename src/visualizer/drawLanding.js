@@ -11,6 +11,14 @@ function hexToRgba(hex, a) {
 
 export function drawLanding(ctx, W, H, t) {
   ctx.clearRect(0, 0, W, H)
+  
+  // Depth Nebula
+  const grad = ctx.createRadialGradient(W/2, H/2, 0, W/2, H/2, W/1.5)
+  grad.addColorStop(0, 'rgba(0, 240, 255, 0.04)')
+  grad.addColorStop(0.5, 'rgba(157, 78, 221, 0.03)')
+  grad.addColorStop(1, 'rgba(3, 4, 7, 0)')
+  ctx.fillStyle = grad
+  ctx.fillRect(0, 0, W, H)
 
   const cx = W / 2
   const cy = H / 2

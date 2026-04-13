@@ -187,7 +187,8 @@ export default function Terminal({ kernelState, onStateChange }) {
           fontWeight: 400,
         }}
       >
-        {/* CRT scanlines */}
+        {/* CRT scanlines and Matrix overlay */}
+        <MatrixRain active={kernelState.viz === 'matrix'} />
         <div className="scanlines" />
 
         {lines.map((line) => (
@@ -281,5 +282,70 @@ function Line({ line }) {
     >
       {parseAnsi(line.content)}
     </div>
+  )
+}
+
+function MatrixRain({ active }) {
+  const canvasRef = useRef(null)
+
+  useEffect(() => {
+    if (!active) return
+    const canvas = canvasRef.current
+    const ctx = canvas.getContext('2d')
+    let animationId
+
+    const resize = () => {
+      canvas.width = canvas.parentElement.offsetWidth
+      canvas.height = canvas.parentElement.offsetHeight
+    }
+    resize()
+    window.addEventListener('resize', resize)
+
+    const columns = Math.floor(canvas.width / 16)
+    const drops = new Array(columns).fill(1)
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789$+-*/=%'
+
+    const draw = () => {
+      ctx.fillStyle = 'rgba(3, 4, 7, 0.1)'
+      ctx.fillRect(0, 0, canvas.width, canvas.height)
+
+      ctx.fillStyle = '#00f0ff'
+      ctx.font = '14px monospace'
+
+      for (let i = 0; i < drops.length; i++) {
+        const text = chars.charAt(Math.floor(Math.random() * chars.length))
+        ctx.fillText(text, i * 16, drops[i] * 16)
+
+        if (drops[i] * 16 > canvas.height && Math.random() > 0.975) {
+          drops[i] = 0
+        }
+        drops[i]++
+      }
+      animationId = requestAnimationFrame(draw)
+    }
+
+    draw()
+    return () => {
+      cancelAnimationFrame(animationId)
+      window.removeEventListener('resize', resize)
+    }
+  }, [active])
+
+  if (!active) return null
+
+  return (
+    <canvas
+      ref={canvasRef}
+      style={{
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        width: '100%',
+        height: '100%',
+        pointerEvents: 'none',
+        opacity: 0.15,
+        zIndex: 0
+      }}
+    />
   )
 }

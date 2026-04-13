@@ -1,7 +1,14 @@
 // ─────────────────────────────────────────────────────────────
 // kernel/data.js
 // Your portfolio content lives here. Edit freely.
+//
+// Data priority:
+//   1. House of Qui API (live, when running locally)
+//   2. localStorage custom projects (CMS additions)
+//   3. Static mock data (fallback / production)
 // ─────────────────────────────────────────────────────────────
+
+import { fetchHoqProjects } from './hoq-client.js'
 
 export const SKILLS = [
   { id: 'react',    name: 'React / Next.js',     level: 90, cat: 'frontend',  deps: ['ts', 'css'] },
@@ -18,55 +25,94 @@ export const SKILLS = [
   { id: 'graphql',  name: 'GraphQL',              level: 73, cat: 'backend',   deps: ['node'] },
 ]
 
-export const PROJECTS = [
+// Sovereign Default Archive — used as fallback on Vercel or when HoQ is offline
+const DEFAULT_ARCHIVE = [
   {
-    id: 'mock_alpha',
-    name: 'Project Alpha (Mock)',
+    id: 'sov_core',
+    name: 'Sovereign Core Architecture',
     year: 2026,
     status: 'active',
-    skills: ['react', 'ts', 'css'],
-    desc: 'An advanced web interface for a totally fictional startup. [REMINDER: THIS IS MOCK DATA]',
-    url: 'https://example.com/alpha',
+    skills: ['react', 'ts', 'node'],
+    desc: 'The fundamental architectural framework for the House of Qui ecosystem. Implements recursive state management and high-fidelity UI rendering.',
+    url: 'https://github.com/jABurat23/house-of-qui',
+    source: 'archive'
   },
   {
-    id: 'mock_beta',
-    name: 'Neural Net Beta (Mock)',
+    id: 'astral_intel',
+    name: 'Astral Intelligence Engine',
     year: 2025,
-    status: 'archived',
+    status: 'active',
     skills: ['python', 'ml', 'postgres'],
-    desc: 'Deep learning pipeline for predictive analysis of made-up datasets. [REMINDER: THIS IS MOCK DATA]',
-    url: 'https://example.com/beta',
+    desc: 'A specialized intelligence layer for predictive topology analysis. Processes imperial telemetry data to visualize system-wide neural connections.',
+    url: 'private',
+    source: 'archive'
   },
   {
-    id: 'mock_gamma',
-    name: 'Gamma Microservice (Mock)',
+    id: 'chronicle_sync',
+    name: 'Chronicle Synchronization Node',
     year: 2024,
     status: 'maintenance',
     skills: ['rust', 'redis', 'docker'],
-    desc: 'A blazing fast distributed system that technically does nothing. [REMINDER: THIS IS MOCK DATA]',
-    url: 'https://example.com/gamma',
-  }
+    desc: 'High-throughput data preservation unit designed for the Imperial Observatory. Ensures zero-loss synchronization of audit logs across distributed sectors.',
+    url: 'https://github.com/jABurat23/rsp_portfolio',
+    source: 'archive'
+  },
 ]
 
+// Live project array — populated by initData() below
+export let PROJECTS = [...DEFAULT_ARCHIVE]
+
+// Track whether we're connected to HoQ
+export let HOQ_CONNECTED = false
+
+// localStorage custom projects (CMS additions made while HoQ is offline)
 let customProjects = []
 try {
   const stored = localStorage.getItem('RSP_CUSTOM_PROJECTS')
-  if (stored) {
-    customProjects = JSON.parse(stored)
-    PROJECTS.push(...customProjects)
-  }
+  if (stored) customProjects = JSON.parse(stored)
 } catch (e) {
-  console.warn('Failed to load custom projects', e)
+  console.warn('Failed to load custom projects from localStorage', e)
 }
 
+/**
+ * Called once at app boot (from App.jsx useEffect).
+ * Tries to load projects from House of Qui; falls back to statics + localStorage.
+ */
+export async function initData() {
+  const hoqProjects = await fetchHoqProjects()
+
+  if (hoqProjects && hoqProjects.length > 0) {
+    // ✅ HoQ is online — use live data + merge any local CMS additions
+    PROJECTS.length = 0
+    // Mark HoQ projects with live source
+    const live = hoqProjects.map(p => ({ ...p, source_origin: 'HOUSE OF QUI [LIVE]' }))
+    PROJECTS.push(...live, ...customProjects)
+    HOQ_CONNECTED = true
+    console.info(`[RSP] HoQ online — loaded ${hoqProjects.length} live projects.`)
+  } else {
+    // ⚠️  HoQ offline / production — use archive + localStorage
+    PROJECTS.length = 0
+    PROJECTS.push(...DEFAULT_ARCHIVE, ...customProjects)
+    HOQ_CONNECTED = false
+    console.info('[RSP] HoQ offline — using local archive fallback data.')
+  }
+}
+
+/**
+ * Add a project. Writes to HoQ if connected, otherwise persists to localStorage.
+ */
 export function addProject(p) {
   PROJECTS.push(p)
-  customProjects.push(p)
-  try {
-    localStorage.setItem('RSP_CUSTOM_PROJECTS', JSON.stringify(customProjects))
-  } catch (e) {
-    console.error('Failed to save project', e)
+  if (!HOQ_CONNECTED) {
+    // Offline mode — persist locally
+    customProjects.push(p)
+    try {
+      localStorage.setItem('RSP_CUSTOM_PROJECTS', JSON.stringify(customProjects))
+    } catch (e) {
+      console.error('Failed to save project locally', e)
+    }
   }
+  // If HoQ is connected, Dashboard.jsx handles the POST directly via hoq-client
 }
 
 export const OWNER = {
