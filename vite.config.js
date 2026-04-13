@@ -3,8 +3,13 @@ import react from '@vitejs/plugin-react'
 import fs from 'fs'
 import path from 'path'
 
+// ── Local File Scanner Plugin (dev-only) ──────────────────────
+// Exposes a /api/scan endpoint that uses Node.js fs to read a
+// local project directory's package.json. Only active during
+// `vite dev` — ignored entirely on production builds.
 const localScannerPlugin = () => ({
   name: 'local-scanner-plugin',
+  apply: 'serve', // ← only applies during dev server, never during build
   configureServer(server) {
     server.middlewares.use(async (req, res, next) => {
       if (req.url.startsWith('/api/scan')) {
@@ -21,8 +26,8 @@ const localScannerPlugin = () => ({
           const pkgPath = path.join(targetPath, 'package.json')
           if (fs.existsSync(pkgPath)) {
             const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'))
-            
-            // Map dependencies to skills
+
+            // Map dependencies to known skill IDs
             const deps = { ...pkg.dependencies, ...pkg.devDependencies }
             const skills = []
             if (deps.react) skills.push('react')
@@ -31,6 +36,8 @@ const localScannerPlugin = () => ({
             if (deps.next) skills.push('next')
             if (deps['@nestjs/core']) skills.push('node')
             if (deps.vite) skills.push('vite')
+            if (deps.prisma || deps['@prisma/client']) skills.push('postgres')
+            if (deps.python) skills.push('python')
 
             res.setHeader('Content-Type', 'application/json')
             res.end(JSON.stringify({
